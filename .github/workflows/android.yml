@@ -20,13 +20,16 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '21'
+          java-version: '17'
 
       - name: Install dependencies
         run: npm install
 
       - name: Add Android platform
         run: npx cap add android
+
+      - name: Generate app icon (баул, светлая/тёмная тема)
+        run: node tools/mkicons.js
 
       - name: Sync web assets
         run: npx cap sync android
