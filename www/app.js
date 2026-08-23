@@ -111,6 +111,8 @@ function seed(){
       {d:'2026-02-18',k:'o',tk:'evInsp',m:'Camp Ballnuts 0.4–3',item:6}
     ],seq:100};
 }
+/* Пустой старт для устройства: демо-данные — только для веб-прототипа. */
+function blank(){ return {onboarded:false,lang:'sys',theme:'sys',notif:{insp:1,trip:1,home:1},items:[],trips:[],events:[],seq:100}; }
 function save(){
   const s=JSON.stringify(D);
   if(NATIVE&&Prefs){ Prefs.set({key:KEY,value:s}).catch(function(){}); scheduleSync(); return; }
@@ -652,7 +654,7 @@ function comeHome(){
   x.state='done';
   logEvent('i','evFinished',d+' '+t('dShort'),0,{mx:x.name}); save(); go('trips'); toast(t('toHome',d));
 }
-function reset(){ if(confirm(t('resetQ'))){ D=seed(); save(); applyTheme(); go('gear'); } }
+function reset(){ if(confirm(t('resetQ'))){ D=NATIVE?blank():seed(); save(); applyTheme(); go('gear'); } }
 
 /* ---------- импорт/экспорт ---------- */
 function catFromText(s){
@@ -792,6 +794,7 @@ if(window.matchMedia) try{ window.matchMedia('(prefers-color-scheme: dark)').add
 function boot(){
   loadD().then(function(real){
     if(real) D=real;
+    else if(NATIVE) D=blank();   // на устройстве чистая установка — без демо
     applyTheme();
     if(!D.onboarded) S.screen='ob';
     render();
