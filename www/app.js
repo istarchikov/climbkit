@@ -51,7 +51,7 @@ const KEY='climbkit-v4';
 const CAP=window.Capacitor||null;
 const NATIVE=!!(CAP&&CAP.isNativePlatform&&CAP.isNativePlatform());
 const PL=(CAP&&CAP.Plugins)||{};
-const FS=PL.Filesystem, Prefs=PL.Preferences, LN=PL.LocalNotifications;
+const FS=PL.Filesystem, Prefs=PL.Preferences, LN=PL.LocalNotifications, App=PL.App;
 const DIR='DATA';   // Directory.Data — приватный каталог приложения
 const PH={};        // кэш: имя файла фото -> URL, который понимает webview
 /* Фото на устройстве — это имя файла; в вебе и в бэкапах — data:-URL. */
@@ -804,6 +804,14 @@ function boot(){
       if(LN) LN.addListener('localNotificationActionPerformed',function(a){
         const ex=a&&a.notification&&a.notification.extra; if(!ex) return;
         if(ex.kind==='insp') openItem(ex.ref); else openTrip(ex.ref);
+      });
+      if(App) App.addListener('backButton',function(){
+        if(S.modal){ closeModal(); return; }             // открыта модалка — закрыть
+        const s=S.screen;
+        if(s==='item'||s==='search'||s==='add'){ go('gear'); return; }
+        if(s==='trip'||s==='tripNew'){ go('trips'); return; }
+        if(s==='gear'||s==='ob'){ App.exitApp(); return; } // корень — выход
+        go('gear');                                        // прочие вкладки — на снаряжение
       });
     }
   });
