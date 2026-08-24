@@ -69,7 +69,7 @@ toTransferred:"Перенесено: %A предметов, %B выездов",t
 toCsv:"Файл скачан",toReadFail:"Не смог прочитать файл",toNotif5:"Придёт через 5 секунд",toNotifDenied:"Уведомления запрещены в браузере",
 toNotifNo:"Браузер не умеет уведомления",notifBody:"Обвязке Petzl Sama пора на осмотр — последний был полгода назад.",
 resetQ:"Вернуть демо-данные?",qs:["верёвка","каска","френды","кошки"],
-mon:"м",pcs:"шт",demoTrip1:"Арко, мультипитч",demoTrip2:"Осп, спорт",demoTrip3:"Гросглокнер",
+mon:"м",pcs:"шт",demoTrip4:"Ай-Петри, скалы",demoTrip1:"Арко, мультипитч",demoTrip2:"Осп, спорт",demoTrip3:"Гросглокнер",
 demoNote1:"Метка синей изолентой на конце А. Чек в почте.",demoNote2:"Запасной аккумулятор в бауле.",
 demoMelt:"Спуск по сдвоенной, оплавилась оплётка на 12 метре",demoAuto:"автомат"},
 en:{gear:"Gear",trips:"Trips",notif:"Reminders",history:"History",more:"More",
@@ -142,7 +142,7 @@ toTransferred:"Transferred: %A items, %B trips",toBadFile:"That isn't a ClimbKit
 toCsv:"File downloaded",toReadFail:"Couldn't read the file",toNotif5:"Arrives in 5 seconds",toNotifDenied:"Notifications are blocked in the browser",
 toNotifNo:"This browser can't do notifications",notifBody:"The Petzl Sama harness is due for inspection — the last one was six months ago.",
 resetQ:"Restore demo data?",qs:["rope","helmet","cams","crampons"],
-mon:"m",pcs:"pcs",demoTrip1:"Arco multipitch",demoTrip2:"Osp sport",demoTrip3:"Grossglockner",
+mon:"m",pcs:"pcs",demoTrip4:"Ai-Petri crags",demoTrip1:"Arco multipitch",demoTrip2:"Osp sport",demoTrip3:"Grossglockner",
 demoNote1:"Blue tape marks end A. Receipt is in my email.",demoNote2:"Spare battery is in the haul bag.",
 demoMelt:"Rappelled on doubles, sheath melted at 12 m",demoAuto:"step-in"}
 };
