@@ -18,7 +18,7 @@ function card(bg1,bg2,ink,glyph,name){
 </svg>`;
 }
 async function url(svg){
-  const b=await sharp(Buffer.from(svg)).jpeg({quality:74}).toBuffer();
+  const b=await sharp(Buffer.from(svg)).resize(480,600).jpeg({quality:58}).toBuffer();
   return 'data:image/jpeg;base64,'+b.toString('base64');
 }
 (async()=>{
