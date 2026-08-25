@@ -1,7 +1,7 @@
 # ClimbKit
 
 Учёт личного альпинистского и скалолазного снаряжения.
-Прототип: https://stoika-gear-ilya-star.vercel.app
+Прототип: https://climbkit-ilya-star.vercel.app/
 
 ## Посмотреть в браузере
 
