@@ -378,7 +378,7 @@ function scTripNew(){
     '<div class="field"><label>'+t('fName')+' <span class="req">*</span></label><input value="'+esc(x.name)+'" oninput="S.trip.name=this.value" placeholder="'+t('tripName')+'" /></div>'+
     '<div class="two"><div class="field"><label>'+t('start')+'</label><input type="date" value="'+x.from+'" oninput="S.trip.from=this.value" /></div>'+
     '<div class="field"><label>'+t('end')+'</label><input type="date" value="'+x.to+'" oninput="S.trip.to=this.value" /></div></div>'+
-    '<p class="label">'+t('gearSelected')+' '+x.items.length+'</p>'+
+    '<p class="label">'+t('gearSelected')+' '+x.items.length+' · '+(tripW(x)/1000).toFixed(1)+' '+t('kg')+'</p>'+
     D.items.filter(i=>i.status!=='retired').map(function(i){
       const on=x.items.indexOf(i.id)>=0;
       return '<button class="item" onclick="tripPick('+i.id+')"><span class="tick" style="color:'+(on?'var(--petrol)':'var(--line-2)')+'">'+ico(on?'u-check':'u-circle','check')+'</span>'+
