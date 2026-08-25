@@ -510,6 +510,7 @@ function obSlides(){ return [
   {t:'ClimbKit',p:t('ob1p'),a:'logo'},
   {t:t('ob2t'),p:t('ob2p'),a:'i-rope'},
   {t:t('ob3t'),p:t('ob3p'),a:'i-pack'},
+  {t:t('obKitT'),p:t('obKitP'),a:'u-list'},
   {t:t('ob4t'),p:t('ob4p'),a:'u-bell'},
   {t:t('ob5t'),p:t('ob5p'),a:'u-clock'}]; }
 function scOb(){
