@@ -3,7 +3,7 @@
 const fs=require('fs'), path=require('path');
 const OUT=path.join(__dirname,'..','www','fonts');
 const UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36';
-const CSS='https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap';
+const CSS='https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap';
 const KEEP=['latin','latin-ext','cyrillic','cyrillic-ext']; // ru + en
 const slug=s=>s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
 
