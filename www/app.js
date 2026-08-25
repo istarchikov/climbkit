@@ -352,7 +352,7 @@ function setRow(s){
 function scTrips(){
   const sorted=D.trips.slice().sort((a,b)=>((a.state==='done')-(b.state==='done'))||String(a.from).localeCompare(String(b.from)));
   return '<div class="top"><div><p class="title">'+t('trips')+'</p><p class="meta">'+D.trips.filter(x=>x.state!=='done').length+' '+t('tripsActive')+'</p></div>'+
-    '<div class="acts"><button class="icobtn" onclick="newTrip()">'+ico('u-plus')+'</button></div></div><div class="body">'+
+    '<div class="acts"><button class="icobtn" onclick="modal(\'tripadd\')">'+ico('u-plus')+'</button></div></div><div class="body">'+
     '<p class="label first">'+t('kits')+'</p>'+
     ((D.sets||[]).length?D.sets.map(setRow).join(''):'<p class="sub">'+t('kitsEmpty')+'</p>')+
     '<button class="btn ghost" style="margin:10px 0 4px" onclick="newSet()">'+t('kitNew')+'</button>'+
@@ -560,6 +560,13 @@ function mAdd(){
     '<span class="grow"><span class="name">'+t('manual')+'</span><span class="meta">'+t('manualP')+'</span></span><span class="chev">'+ico('u-next','check')+'</span></button>'+
     '<button class="item" onclick="modal(\'import\')"><div class="badge plain">'+ico('u-file')+'</div>'+
     '<span class="grow"><span class="name">'+t('excel')+'</span><span class="meta">'+t('excelP')+'</span></span><span class="chev">'+ico('u-next','check')+'</span></button>');
+}
+function mTripAdd(){
+  return sheet('<p class="mt">'+t('pickCreate')+'</p>'+
+    '<button class="item" onclick="newTrip()"><div class="badge plain">'+ico('i-pack')+'</div>'+
+    '<span class="grow"><span class="name">'+t('newTrip')+'</span><span class="meta">'+t('tripSub')+'</span></span><span class="chev">'+ico('u-next','check')+'</span></button>'+
+    '<button class="item" onclick="newSet()"><div class="badge plain">'+ico('u-list')+'</div>'+
+    '<span class="grow"><span class="name">'+t('kitNew')+'</span><span class="meta">'+t('kitSub')+'</span></span><span class="chev">'+ico('u-next','check')+'</span></button>');
 }
 function mImport(){
   return sheet('<p class="mt">'+t('importT')+'</p><p class="meta mb">'+t('importP')+'</p>'+
@@ -875,7 +882,7 @@ function render(keepFocus){
   const M={gear:scGear,item:scItem,trips:scTrips,trip:scTrip,tripNew:scTripNew,setNew:scSet,notif:scNotif,history:scHistory,settings:scSettings,search:scSearch,add:scAdd,ob:scOb};
   $('#view').className=(s==='ob')?'full':'';
   $('#view').innerHTML=(M[s]||scGear)();
-  const MD={filters:mFilters,retire:mRetire,add:mAdd,import:mImport,transfer:mTransfer,restore:mRestore,photo:mPhoto};
+  const MD={filters:mFilters,retire:mRetire,add:mAdd,tripadd:mTripAdd,import:mImport,transfer:mTransfer,restore:mRestore,photo:mPhoto};
   $('#modal').innerHTML=MD[S.modal]?MD[S.modal]():'';
   $('#toast').innerHTML=S.toast?('<div class="toast">'+esc(S.toast)+'</div>'):'';
   const nR=reminders().filter(r=>r.due).length;
