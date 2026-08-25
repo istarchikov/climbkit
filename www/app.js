@@ -299,7 +299,8 @@ function scItem(){
     '<div class="slegend"><span>'+(it.made?(t('madeOn')+' '+fmt(it.made)):t('noMade'))+'</span><span>'+t('totalMax')+' '+(L[0]+L[1])+'</span></div></div>';
   else card='<p class="lead">'+t('noLifeT')+' «'+t(GKEY[T.g])+'»</p><p class="sub">'+t('noLifeP')+'</p>';
   return '<div class="top"><button class="icobtn" onclick="go(\'gear\')">'+ico('u-back')+'</button>'+
-    '<p class="title sm">'+esc(tlabel(it.type))+'</p><span class="sp"></span></div><div class="body">'+
+    '<p class="title sm">'+esc(tlabel(it.type))+'</p>'+
+    '<button class="icobtn" onclick="startEdit('+it.id+')">'+ico('u-edit')+'</button></div><div class="body">'+
     '<div class="hero">'+badge(it.type,it.status==='retired',60)+
     '<div><p class="hname">'+esc(it.name)+'</p><p class="meta">'+[tlabel(it.type),it.size,it.serial?('№ '+it.serial):''].filter(Boolean).map(esc).join(' · ')+'</p>'+
     '<span class="pw">'+(pill(it)||'<span class="pill ok">'+t('pOk')+'</span>')+'</span></div></div>'+
@@ -456,16 +457,23 @@ function scAdd(){
   const opts=Object.keys(GKEY).map(function(g){
     return '<optgroup label="'+t(GKEY[g])+'">'+Object.keys(TYPES).filter(k=>TYPES[k].g===g).map(function(k){
       return '<option value="'+k+'"'+(type===k?' selected':'')+'>'+tlabel(k)+'</option>'; }).join('')+'</optgroup>'; }).join('');
-  return '<div class="top"><button class="icobtn" onclick="go(\'gear\')">'+ico('u-back')+'</button>'+
-    '<p class="title sm">'+t('addTitle')+'</p><span class="sp"></span></div><div class="body">'+
+  const edit=!!f.id;
+  return '<div class="top"><button class="icobtn" onclick="cancelForm()">'+ico('u-back')+'</button>'+
+    '<p class="title sm">'+t(edit?'editTitle':'addTitle')+'</p><span class="sp"></span></div><div class="body">'+
     '<div class="field"><label>'+t('fName')+' <span class="req">*</span></label><input value="'+esc(f.name||'')+'" oninput="S.form.name=this.value" placeholder="Beal Booster 9.8" /></div>'+
     '<div class="field"><label>'+t('category')+'</label><select onchange="setFormType(this.value)">'+opts+'</select></div>'+lifeHint(type)+
     '<div class="field"><label>'+t('fSize')+'</label><input value="'+esc(f.size||'')+'" oninput="S.form.size=this.value" /></div>'+
     '<div class="two"><div class="field"><label>'+t('fBuy')+'</label><input type="date" value="'+(f.buy||'')+'" oninput="S.form.buy=this.value" /></div>'+
     '<div class="field"><label>'+t('fMade')+'</label><input type="date" value="'+(f.made||'')+'" oninput="S.form.made=this.value" /></div></div>'+
-    '<div class="field"><label>'+t('fWeight')+'</label><input type="number" value="'+(f.weight||'')+'" oninput="S.form.weight=this.value" /></div>'+
+    '<div class="two"><div class="field"><label>'+t('fWeight')+'</label><input type="number" value="'+(f.weight||'')+'" oninput="S.form.weight=this.value" /></div>'+
+    '<div class="field"><label>'+t('fSerial')+'</label><input value="'+esc(f.serial||'')+'" oninput="S.form.serial=this.value" /></div></div>'+
+    (edit?('<p class="label">'+t('usage')+'</p><div class="two">'+
+      '<div class="field"><label>'+t('days')+'</label><input type="number" min="0" value="'+(f.days||0)+'" oninput="S.form.days=this.value" /></div>'+
+      '<div class="field"><label>'+t('falls')+'</label><input type="number" min="0" value="'+(f.falls||0)+'" oninput="S.form.falls=this.value" /></div></div>'+
+      '<div class="two"><div class="field"><label>'+t('factor')+'</label><input type="number" step="0.1" min="0" value="'+(f.factor||0)+'" oninput="S.form.factor=this.value" /></div>'+
+      '<div class="field"><label>'+t('fLastInsp')+'</label><input type="date" value="'+(f.lastInsp||'')+'" oninput="S.form.lastInsp=this.value" /></div></div>'):'')+
     '<div class="field"><label>'+t('notes')+'</label><textarea rows="2" maxlength="500" placeholder="'+t('optional')+'" oninput="S.form.notes=this.value">'+esc(f.notes||'')+'</textarea></div></div>'+
-    '<div class="foot"><button class="btn" '+((f.name||'').trim()?'':'disabled')+' onclick="saveItem()">'+t('addBtn')+'</button></div>';
+    '<div class="foot"><button class="btn" '+((f.name||'').trim()?'':'disabled')+' onclick="saveItem()">'+t(edit?'editBtn':'addBtn')+'</button></div>';
 }
 
 /* ---------- онбординг ---------- */
@@ -572,6 +580,14 @@ function setReason(r){ S.reason=r; render(); }
 function onReasonText(el){ S.reasonText=el.value; const c=document.getElementById('rc'); if(c) c.textContent=el.value.length+' / 200';
   const b=document.querySelector('.btn.danger'); if(b) b.disabled=!el.value.trim(); }
 function startManual(){ S.modal=null; S.form={type:'rope'}; go('add'); }
+function startEdit(id){
+  const it=item(id); if(!it) return;
+  S.form={id:it.id,type:it.type,name:it.name,size:it.size||'',buy:it.buy||'',made:it.made||'',
+    weight:it.weight||'',serial:it.serial||'',days:it.days||0,falls:it.falls||0,factor:it.factor||0,
+    lastInsp:it.lastInsp||'',notes:it.notes||''};
+  S.modal=null; go('add');
+}
+function cancelForm(){ const id=S.form.id; S.form={}; if(id) openItem(id); else go('gear'); }
 function toggleNotif(k){ D.notif[k]=D.notif[k]?0:1; save(); render(); }
 function setLang(v){ D.lang=v; save(); render(); }
 function setTheme(v){ D.theme=v; save(); applyTheme(); render(); }
@@ -630,8 +646,18 @@ function retire(){
 }
 function saveItem(){
   const f=S.form;
+  if(f.id){ // редактирование существующего; срок пересчитается сам из дат/типа при рендере
+    const it=item(f.id); if(!it) return;
+    it.type=f.type||it.type; it.name=(f.name||'').trim(); it.size=f.size||'';
+    it.buy=f.buy||''; it.made=f.made||''; it.weight=+f.weight||0; it.serial=(f.serial||'').trim();
+    it.days=Math.max(0,Math.round(+f.days||0)); it.falls=Math.max(0,Math.round(+f.falls||0));
+    it.factor=Math.max(0,+f.factor||0); it.lastInsp=f.lastInsp||''; it.notes=f.notes||'';
+    logEvent('o','evEdited',it.name,it.id);
+    S.form={}; save(); openItem(it.id); toast(t('toSaved'));
+    return;
+  }
   const it={id:++D.seq,type:f.type||'rope',name:f.name.trim(),size:f.size||'',buy:f.buy||iso(today()),made:f.made||'',
-    days:0,falls:0,factor:0,weight:+f.weight||0,status:'ok',lastInsp:iso(today()),notes:f.notes||'',photos:[]};
+    days:0,falls:0,factor:0,weight:+f.weight||0,status:'ok',lastInsp:iso(today()),notes:f.notes||'',photos:[],serial:(f.serial||'').trim()};
   D.items.unshift(it); logEvent('i','evAdded',it.name,it.id);
   S.form={}; save(); openItem(it.id); toast(t('toAdded'));
 }
