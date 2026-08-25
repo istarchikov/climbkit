@@ -67,7 +67,7 @@ function resolvePhotos(){
 }
 
 /* ---------- состояние ---------- */
-let D=load()||seed();
+let D=load()||blank();   // прототип стартует пустым; seed() оставлен для опционального демо
 let S={tab:'gear',screen:'gear',id:null,id2:null,tripId:null,modal:null,q:'',
 filters:{g:[],s:[]},reason:'rMelt',reasonText:'',ob:0,obSkip:false,photo:null,
 form:{},trip:{name:'',from:'',to:'',items:[]},set:{name:'',items:[]},toast:null};
@@ -760,7 +760,7 @@ function comeHome(){
   x.state='done'; hap('Medium');
   logEvent('i','evFinished',d+' '+t('dShort'),0,{mx:x.name}); save(); go('trips'); toast(t('toHome',d));
 }
-function reset(){ if(confirm(t('resetQ'))){ D=NATIVE?blank():seed(); save(); applyTheme(); go('gear'); } }
+function reset(){ if(confirm(t('resetQ'))){ D=blank(); save(); applyTheme(); go('gear'); } }
 
 /* ---------- импорт/экспорт ---------- */
 function catFromText(s){
@@ -916,7 +916,7 @@ if(window.matchMedia) try{ window.matchMedia('(prefers-color-scheme: dark)').add
 function boot(){
   loadD().then(function(real){
     if(real) D=real;
-    else if(NATIVE) D=blank();   // на устройстве чистая установка — без демо
+    else D=blank();   // чистый старт без демо (и в вебе, и на устройстве)
     if(!D.sets) D.sets=[];       // совместимость со старыми сохранениями
     applyTheme();
     if(!D.onboarded) S.screen='ob';
