@@ -38,6 +38,14 @@ body{margin:0;background:var(--stone);font-family:'Manrope',system-ui,sans-serif
 .cardview .title.sm{font-size:18px}
 .track{position:relative}
 .track .yt{position:absolute;top:0;bottom:0;width:1px;background:var(--stone);pointer-events:none}
+.segwrap{padding:2px 18px 4px}
+.seg{display:flex;background:var(--panel);border-radius:11px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:transparent;color:var(--ink-2);font-family:inherit;font-size:14px;font-weight:500;padding:8px 0;border-radius:8px;cursor:pointer;transition:background .15s,color .15s}
+.seg button.on{background:var(--white);color:var(--ink)}
+@keyframes swf{from{transform:translateX(16px);opacity:.35}to{transform:none;opacity:1}}
+@keyframes swb{from{transform:translateX(-16px);opacity:.35}to{transform:none;opacity:1}}
+.sw-fwd{animation:swf .18s ease}
+.sw-back{animation:swb .18s ease}
 .item{transition:background .12s,transform .07s}
 .item:active{transform:scale(.986)}
 .tick svg{transition:transform .12s}

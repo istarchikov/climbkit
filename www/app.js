@@ -70,13 +70,16 @@ function resolvePhotos(){
 let D=load()||blank();   // прототип стартует пустым; seed() оставлен для опционального демо
 let S={tab:'gear',screen:'gear',id:null,id2:null,tripId:null,modal:null,q:'',
 filters:{g:[],s:[]},reason:'rMelt',reasonText:'',ob:0,obSkip:false,photo:null,
-form:{},trip:{name:'',from:'',to:'',items:[]},set:{name:'',items:[]},toast:null};
+form:{},trip:{name:'',from:'',to:'',items:[]},set:{name:'',items:[]},subtab:0,toast:null};
 
 function sysLang(){ return (navigator.language||'en').toLowerCase().indexOf('ru')===0?'ru':'en'; }
 function lang(){ return (D.lang&&D.lang!=='sys')?D.lang:sysLang(); }
 function t(k,a,b){ const s=(TXT[lang()]&&TXT[lang()][k])!==undefined?TXT[lang()][k]:k;
   return typeof s==='string'?s.replace('%A',a).replace('%B',b):s; }
 function tp(o){ return o[lang()]||o.en; }
+function plu(n,key){ const p=t(key).split('|');   // ru: один|несколько|много; en: один|много
+  if(lang()==='ru'){ const a=Math.abs(n)%100,b=a%10; return (a>10&&a<20)?p[2]:(b>1&&b<5)?p[1]:(b===1)?p[0]:p[2]; }
+  return p[n===1?0:1]; }
 
 function seed(){
   const L=sysLang(), T=TXT[L];
@@ -349,21 +352,35 @@ function setRow(s){
     '<span class="grow"><span class="name">'+esc(s.name)+'</span><span class="meta">'+s.items.length+' '+t('posShort')+' · '+wg(setW(s))+'</span></span>'+
     '<span class="chev">'+ico('u-next','check')+'</span></button>';
 }
+function tripRow(x){
+  const st=TSTATE[x.state];
+  return '<button class="item" onclick="openTrip('+x.id+')">'+badge('pack',x.state==='done')+
+    '<span class="grow"><span class="name">'+esc(x.name)+'</span><span class="meta">'+fmtShort(x.from)+' — '+fmtShort(x.to)+' · '+x.items.length+' '+t('posShort')+' · '+wg(tripW(x))+'</span></span>'+
+    '<span class="pill '+st[1]+'">'+t(st[0])+'</span></button>';
+}
+function setSub(n){ if(S.subtab===n) return; S._anim=n>S.subtab?'fwd':'back'; S.subtab=n; hap(); render(); }
+function swipeStart(e){ const t0=e.changedTouches[0]; S._sx=t0.clientX; S._sy=t0.clientY; }
+function swipeEnd(e){ const t0=e.changedTouches[0],dx=t0.clientX-(S._sx||0),dy=t0.clientY-(S._sy||0);
+  if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5) setSub(dx<0?1:0); }
 function scTrips(){
+  const sub=S.subtab||0;
   const sorted=D.trips.slice().sort((a,b)=>((a.state==='done')-(b.state==='done'))||String(a.from).localeCompare(String(b.from)));
-  return '<div class="top"><div><p class="title">'+t('trips')+'</p><p class="meta">'+D.trips.filter(x=>x.state!=='done').length+' '+t('tripsActive')+'</p></div>'+
-    '<div class="acts"><button class="icobtn" onclick="modal(\'tripadd\')">'+ico('u-plus')+'</button></div></div><div class="body">'+
-    '<p class="label first">'+t('kits')+'</p>'+
-    ((D.sets||[]).length?D.sets.map(setRow).join(''):'<p class="sub">'+t('kitsEmpty')+'</p>')+
-    '<button class="btn ghost" style="margin:10px 0 4px" onclick="newSet()">'+t('kitNew')+'</button>'+
-    '<p class="label">'+t('trips')+'</p>'+
-    (sorted.length?sorted.map(function(x){
-      const st=TSTATE[x.state];
-      return '<button class="item" onclick="openTrip('+x.id+')">'+badge('pack',x.state==='done')+
-      '<span class="grow"><span class="name">'+esc(x.name)+'</span><span class="meta">'+fmtShort(x.from)+' — '+fmtShort(x.to)+' · '+x.items.length+' '+t('posShort')+' · '+wg(tripW(x))+'</span></span>'+
-      '<span class="pill '+st[1]+'">'+t(st[0])+'</span></button>';
-    }).join(''):emptyBlock(t('noTripsT'),t('noTripsP'),false))+
-    '<button class="btn ghost" style="margin-top:16px" onclick="newTrip()">'+t('newTrip')+'</button></div>';
+  const sets=D.sets||[];
+  const nActive=D.trips.filter(x=>x.state!=='done').length;
+  const meta=sub===0?(nActive+' '+plu(nActive,'pActive')):(sets.length+' '+plu(sets.length,'pKit'));
+  const title=sub===0?t('trips'):t('kits');
+  const seg='<div class="segwrap"><div class="seg">'+
+    '<button class="'+(sub===0?'on':'')+'" onclick="setSub(0)">'+t('trips')+'</button>'+
+    '<button class="'+(sub===1?'on':'')+'" onclick="setSub(1)">'+t('kits')+'</button></div></div>';
+  const body=sub===0
+    ?((sorted.length?sorted.map(tripRow).join(''):emptyBlock(t('noTripsT'),t('noTripsP'),false))+
+      '<button class="btn ghost" style="margin-top:16px" onclick="newTrip()">'+t('newTrip')+'</button>')
+    :((sets.length?sets.map(setRow).join(''):emptyBlock(t('noKitsT'),t('kitsEmpty'),false))+
+      '<button class="btn ghost" style="margin-top:16px" onclick="newSet()">'+t('kitNew')+'</button>');
+  const anim=S._anim; S._anim=null;
+  return '<div class="top"><div><p class="title">'+title+'</p><p class="meta">'+meta+'</p></div>'+
+    '<div class="acts"><button class="icobtn" onclick="modal(\'tripadd\')">'+ico('u-plus')+'</button></div></div>'+
+    seg+'<div class="body swipe'+(anim?(' sw-'+anim):'')+'" ontouchstart="swipeStart(event)" ontouchend="swipeEnd(event)">'+body+'</div>';
 }
 
 function scTrip(){
