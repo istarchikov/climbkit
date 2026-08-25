@@ -402,10 +402,10 @@ function scTripNew(){
   const x=S.trip;
   return '<div class="top"><button class="icobtn" onclick="go(\'trips\')">'+ico('u-back')+'</button>'+
     '<p class="title sm">'+t('tripNewT')+'</p><span class="sp"></span></div><div class="body">'+
-    '<div class="field"><label>'+t('fName')+' <span class="req">*</span></label><input value="'+esc(x.name)+'" oninput="S.trip.name=this.value" placeholder="'+t('tripName')+'" /></div>'+
+    '<div class="field"><label>'+t('fName')+' <span class="req">*</span></label><input value="'+esc(x.name)+'" oninput="S.trip.name=this.value;chkBtn(this.value.trim()&&S.trip.items.length)" placeholder="'+t('tripName')+'" /></div>'+
     '<div class="two"><div class="field"><label>'+t('start')+'</label><input type="date" value="'+x.from+'" oninput="S.trip.from=this.value" /></div>'+
     '<div class="field"><label>'+t('end')+'</label><input type="date" value="'+x.to+'" oninput="S.trip.to=this.value" /></div></div>'+
-    ((D.sets||[]).length?('<div class="field"><label>'+t('fromKit')+'</label><select onchange="applyKit(this.value)"><option value="">'+t('kitPick')+'</option>'+D.sets.map(s=>'<option value="'+s.id+'">'+esc(s.name)+' · '+s.items.length+'</option>').join('')+'</select></div>'):'')+
+    ((D.sets||[]).length?('<div class="field"><label>'+t('fromKit')+'</label><select onchange="applyKit(this.value)"><option value=""'+(x.kit?'':' selected')+'>'+t('kitPick')+'</option>'+D.sets.map(s=>'<option value="'+s.id+'"'+(+x.kit===s.id?' selected':'')+'>'+esc(s.name)+' · '+s.items.length+'</option>').join('')+'</select></div>'):'')+
     '<p class="label">'+t('gearSelected')+' '+x.items.length+' · '+wg(tripW(x))+'</p>'+
     D.items.filter(i=>i.status!=='retired').map(function(i){
       const on=x.items.indexOf(i.id)>=0;
@@ -488,7 +488,7 @@ function scAdd(){
   const edit=!!f.id;
   return '<div class="top"><button class="icobtn" onclick="cancelForm()">'+ico('u-back')+'</button>'+
     '<p class="title sm">'+t(edit?'editTitle':'addTitle')+'</p><span class="sp"></span></div><div class="body">'+
-    '<div class="field"><label>'+t('fName')+' <span class="req">*</span></label><input value="'+esc(f.name||'')+'" oninput="S.form.name=this.value" placeholder="Beal Booster 9.8" /></div>'+
+    '<div class="field"><label>'+t('fName')+' <span class="req">*</span></label><input value="'+esc(f.name||'')+'" oninput="S.form.name=this.value;chkBtn(this.value.trim())" placeholder="Beal Booster 9.8" /></div>'+
     '<div class="field"><label>'+t('category')+'</label><select onchange="setFormType(this.value)">'+opts+'</select></div>'+lifeHint(type)+
     '<div class="field"><label>'+t('fSize')+'</label><input value="'+esc(f.size||'')+'" oninput="S.form.size=this.value" /></div>'+
     '<div class="two"><div class="field"><label>'+t('fBuy')+'</label><input type="date" value="'+(f.buy||'')+'" oninput="S.form.buy=this.value" /></div>'+
@@ -690,7 +690,8 @@ function saveItem(){
   D.items.unshift(it); logEvent('i','evAdded',it.name,it.id);
   S.form={}; save(); openItem(it.id); toast(t('toAdded'));
 }
-function newTrip(){ S.trip={name:'',from:iso(today()),to:iso(new Date(Date.now()+2*864e5)),items:[]}; S.screen='tripNew'; S.modal=null; render(); }
+function chkBtn(ok){ const b=$('#view .foot .btn'); if(b) b.disabled=!ok; }  // живое вкл/выкл кнопки формы без перерисовки
+function newTrip(){ S.trip={name:'',from:iso(today()),to:iso(new Date(Date.now()+2*864e5)),items:[],kit:0}; S.screen='tripNew'; S.modal=null; render(); }
 function tripPick(id){ const a=S.trip.items,i=a.indexOf(id); if(i<0){a.push(id);hap();} else a.splice(i,1); render(); }
 /* ---------- наборы (киты) ---------- */
 function scSet(){
@@ -698,7 +699,7 @@ function scSet(){
   return '<div class="top"><button class="icobtn" onclick="go(\'trips\')">'+ico('u-back')+'</button>'+
     '<p class="title sm">'+t(edit?'kitEdit':'kitNew')+'</p>'+
     (edit?('<button class="icobtn" onclick="delSet()">'+ico('u-trash')+'</button>'):'<span class="sp"></span>')+'</div><div class="body">'+
-    '<div class="field"><label>'+t('fName')+' <span class="req">*</span></label><input value="'+esc(s.name)+'" oninput="S.set.name=this.value" placeholder="'+t('kitNamePh')+'" /></div>'+
+    '<div class="field"><label>'+t('fName')+' <span class="req">*</span></label><input value="'+esc(s.name)+'" oninput="S.set.name=this.value;chkBtn(this.value.trim()&&S.set.items.length)" placeholder="'+t('kitNamePh')+'" /></div>'+
     '<p class="label">'+t('gearSelected')+' '+s.items.length+' · '+wg(setW(s))+'</p>'+
     D.items.filter(i=>i.status!=='retired').map(function(i){
       const on=s.items.indexOf(i.id)>=0;
@@ -719,8 +720,8 @@ function saveSet(){
   save(); go('trips');
 }
 function delSet(){ if(!S.set.id) return; if(!confirm(t('kitDelQ'))) return; D.sets=(D.sets||[]).filter(y=>y.id!==S.set.id); save(); go('trips'); toast(t('toKitDel')); }
-function applyKit(id){ id=+id; if(!id) return; const s=(D.sets||[]).find(y=>y.id===id); if(!s) return;
-  S.trip.items=s.items.filter(function(i){ const it=item(i); return it&&it.status!=='retired'; }); hap(); render(); }
+function applyKit(id){ id=+id; if(!id){ S.trip.kit=0; render(); return; } const s=(D.sets||[]).find(y=>y.id===id); if(!s) return;
+  S.trip.kit=id; S.trip.items=s.items.filter(function(i){ const it=item(i); return it&&it.status!=='retired'; }); hap(); render(); }
 function saveAsKit(){ const x=D.trips.find(y=>y.id===S.tripId); if(!x||!x.items.length) return;
   if(!D.sets) D.sets=[]; D.sets.push({id:++D.seq,name:x.name,items:x.items.slice()}); save(); toast(t('toKitNew')); }
 function saveTrip(){
