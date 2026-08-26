@@ -149,8 +149,25 @@ const yb=(a,b)=>(b-a)/(365.25*24*3600*1000);
 const db=(a,b)=>Math.round((b-a)/(24*3600*1000));
 function ageText(y){ const w=Math.floor(y),m=Math.round((y-w)*12); return (m&&w<10)?(w+' '+t('yr')+' '+m+' '+t('mo')):(w+' '+t('yr')); }
 function tripDays(x){ const a=parse(x.from),b=parse(x.to); return (a&&b)?Math.max(1,db(a,b)+1):1; }
-function tripW(x){ return x.items.reduce((s,id)=>{ const i=item(id); return s+(i?i.weight:0); },0); }
+function qtyOf(it){ return Math.max(1,Math.round(it.qty||1)); }
+function itemW(it){ return qtyOf(it)*(it.weight||0); }          // общий вес позиции = вес за штуку × количество
+function tripW(x){ return x.items.reduce((s,id)=>{ const i=item(id); return s+(i?itemW(i):0); },0); }
 function item(id){ return D.items.find(i=>i.id===id); }
+/* Наработка: реальные дни в поле. days = базовая наработка + сумма завершённых
+   выездов, где предмет участвовал. daysBase хранит наработку, набранную вне
+   трекнутых выездов (заведена руками при добавлении старой снаряги). Дни всегда
+   производные — refreshDays() пересчитывает кэш it.days из выездов. */
+function doneDays(id){ return D.trips.filter(x=>x.state==='done'&&x.items&&x.items.indexOf(id)>=0).reduce((s,x)=>s+tripDays(x),0); }
+function refreshDays(){ D.items.forEach(function(it){ it.days=(it.daysBase||0)+doneDays(it.id); }); }
+/* Одноразовая миграция (идемпотентна): проставить qty и вычислить daysBase так,
+   чтобы существующая наработка сохранилась, а дальше считалась через выезды. */
+function migrateData(){
+  D.items.forEach(function(it){
+    if(it.qty===undefined) it.qty=1;
+    if(it.daysBase===undefined) it.daysBase=Math.max(0,Math.round((it.days||0)-doneDays(it.id)));
+  });
+  refreshDays();
+}
 function life(it){ if(it.type in LIFE_T) return LIFE_T[it.type]; return LIFE_G[(TYPES[it.type]||{}).g]||null; }
 function firstUse(it){ return it.first||it.buy||''; }  // начало эксплуатации: первое использование, иначе покупка
 function ageOf(it){ const f=firstUse(it); return f?Math.max(0,yb(parse(f),today())):0; }
@@ -248,7 +265,8 @@ function pill(it){
 function subLine(it){
   if(it.status==='retired') return t('retiredDot')+' · '+t(it.reason||'rOther');
   const L=life(it);
-  return (L?(ageText(ageOf(it))+' / '+L[0]):t('noTerm'))+' · '+it.days+' '+t('dShort');
+  const base=(L?(ageText(ageOf(it))+' / '+L[0]):t('noTerm'))+' · '+it.days+' '+t('dShort');
+  return qtyOf(it)>1?(base+' · × '+qtyOf(it)):base;
 }
 function row(it){
   const d=it.status==='retired';
@@ -320,7 +338,7 @@ function scItem(){
     '<p class="title sm">'+esc(tlabel(it.type))+'</p>'+
     '<button class="icobtn" onclick="startEdit('+it.id+')">'+ico('u-edit')+'</button></div><div class="body cardview">'+
     '<div class="hero">'+badge(it.type,it.status==='retired',60)+
-    '<div><p class="hname">'+esc(it.name)+'</p><p class="meta">'+[tlabel(it.type),it.size,it.serial?('№ '+it.serial):''].filter(Boolean).map(esc).join(' · ')+'</p>'+
+    '<div><p class="hname">'+esc(it.name)+'</p><p class="meta">'+[tlabel(it.type),it.size,qtyOf(it)>1?('× '+qtyOf(it)):'',itemW(it)?wg(itemW(it)):'',it.serial?('№ '+it.serial):''].filter(Boolean).map(esc).join(' · ')+'</p>'+
     '<span class="pw">'+(pill(it)||'<span class="pill ok">'+t('pOk')+'</span>')+'</span></div></div>'+
     ((it.status==='retired'&&it.reasonText)?('<div class="note alert nb">'+ico('u-warn')+'<span><p>'+t(it.reason||'rOther')+'</p><p class="s">'+esc(it.reasonText)+'</p></span></div>'):'')+
     '<p class="label first">'+t('lifeTitle')+'</p><div class="card">'+card+'</div>'+
@@ -334,7 +352,8 @@ function scItem(){
     '<p class="label">'+t('notes')+'</p><textarea rows="3" maxlength="500" placeholder="'+t('notesPh')+'" oninput="saveNotes('+it.id+',this.value)">'+esc(it.notes||'')+'</textarea>'+
     '<p class="label">'+t('histTitle')+'</p>'+
     (log.length?log.map(evRow).join(''):'<p class="sub">'+t('nothingLogged')+'</p>')+
-    (it.status==='retired'?'':('<div class="brow"><button class="btn ghost" onclick="mark('+it.id+',\'insp\')">'+t('insp')+'</button>'+
+    (it.status==='retired'?'':('<div class="brow"><button class="btn ghost" onclick="mark('+it.id+',\'day\')">'+t('dayAdd')+'</button>'+
+    '<button class="btn ghost" onclick="mark('+it.id+',\'insp\')">'+t('insp')+'</button>'+
     '<button class="btn ghost" onclick="mark('+it.id+',\'fall\')">'+t('fall')+'</button>'+
     '<button class="btn dangerghost" onclick="modal(\'retire\','+it.id+')">'+t('retire')+'</button></div>'))+'</div>';
 }
@@ -389,7 +408,7 @@ function scTrip(){
   const done=list.filter(i=>x.picked[i.id]).length;
   const all=done===list.length&&list.length>0;
   const dead=list.filter(i=>i.status==='retired');
-  const w=list.filter(i=>x.picked[i.id]).reduce((s,i)=>s+i.weight,0);
+  const w=list.filter(i=>x.picked[i.id]).reduce((s,i)=>s+itemW(i),0);
   const C=2*Math.PI*15.5, off=C*(1-(list.length?done/list.length:0));
   const st=TSTATE[x.state];
   const canDel=(x.state==='draft'||x.state==='ready');
@@ -409,7 +428,7 @@ function scTrip(){
       '<span class="tick" style="color:'+(x.picked[i.id]?'var(--petrol)':'var(--line-2)')+'">'+ico(x.picked[i.id]?'u-check':'u-circle','check')+'</span>'+
       badge(i.type,i.status==='retired')+
       '<span class="grow"><span class="name"'+(i.status==='retired'?' style="color:var(--clay)"':'')+'>'+esc(i.name)+'</span>'+
-      '<span class="meta">'+wg(i.weight)+'</span></span></button>';
+      '<span class="meta">'+wg(itemW(i))+(qtyOf(i)>1?(' · × '+qtyOf(i)):'')+'</span></span></button>';
     }).join('')+
     (list.length?('<button class="btn ghost" style="margin-top:14px" onclick="saveAsKit()">'+t('kitSaveAs')+'</button>'):'')+
     (hint?('<p class="hint">'+hint+'</p>'):'')+'</div><div class="foot">'+btn+'</div>';
@@ -427,7 +446,7 @@ function scTripNew(){
     D.items.filter(i=>i.status!=='retired').map(function(i){
       const on=x.items.indexOf(i.id)>=0;
       return '<button class="item" onclick="tripPick('+i.id+')"><span class="tick" style="color:'+(on?'var(--petrol)':'var(--line-2)')+'">'+ico(on?'u-check':'u-circle','check')+'</span>'+
-      badge(i.type)+'<span class="grow"><span class="name">'+esc(i.name)+'</span><span class="meta">'+wg(i.weight)+'</span></span></button>';
+      badge(i.type)+'<span class="grow"><span class="name">'+esc(i.name)+'</span><span class="meta">'+wg(itemW(i))+(qtyOf(i)>1?(' · × '+qtyOf(i)):'')+'</span></span></button>';
     }).join('')+
     '<p class="hint">'+t('tripHint')+'</p></div>'+
     '<div class="foot"><button class="btn" '+((x.name.trim()&&x.items.length)?'':'disabled')+' onclick="saveTrip()">'+t('createTrip')+'</button></div>';
@@ -496,6 +515,9 @@ function lifeHint(type){
   return '<div class="note info nb">'+ico('u-warn')+'<span><p>'+t('lifeTitle')+'</p><p class="s">'+body+'</p></span></div>';
 }
 function setFormType(v){ S.form.type=v; render(); }
+/* Живой пересчёт общего веса позиции в форме (вес за штуку × количество). */
+function wtotText(){ const q=Math.max(1,Math.round(+S.form.qty||1)),w=+S.form.weight||0; return (q>1&&w)?t('wTotalN',q,wg(q*w)):''; }
+function wtot(){ const el=document.getElementById('wtot'); if(el) el.textContent=wtotText(); }
 
 function scAdd(){
   const f=S.form,type=f.type||'rope';
@@ -511,8 +533,10 @@ function scAdd(){
     '<div class="two"><div class="field"><label>'+t('fBuy')+'</label><input type="date" value="'+(f.buy||'')+'" oninput="S.form.buy=this.value" /></div>'+
     '<div class="field"><label>'+t('fMade')+'</label><input type="date" value="'+(f.made||'')+'" oninput="S.form.made=this.value" /></div></div>'+
     '<div class="field"><label>'+t('fFirst')+'</label><input type="date" value="'+(f.first||'')+'" oninput="S.form.first=this.value" /></div>'+
-    '<div class="two"><div class="field"><label>'+t('fWeight')+'</label><input type="number" value="'+(f.weight||'')+'" oninput="S.form.weight=this.value" /></div>'+
-    '<div class="field"><label>'+t('fSerial')+'</label><input value="'+esc(f.serial||'')+'" oninput="S.form.serial=this.value" /></div></div>'+
+    '<div class="two"><div class="field"><label>'+t('fWeight')+' · '+t('wEach')+'</label><input type="number" min="0" value="'+(f.weight||'')+'" oninput="S.form.weight=this.value;wtot()" /></div>'+
+    '<div class="field"><label>'+t('fQty')+'</label><input type="number" min="1" step="1" value="'+(f.qty||1)+'" oninput="S.form.qty=this.value;wtot()" /></div></div>'+
+    '<p class="hint" id="wtot">'+wtotText()+'</p>'+
+    '<div class="field"><label>'+t('fSerial')+'</label><input value="'+esc(f.serial||'')+'" oninput="S.form.serial=this.value" /></div>'+
     (edit?('<p class="label">'+t('usage')+'</p><div class="two">'+
       '<div class="field"><label>'+t('days')+'</label><input type="number" min="0" value="'+(f.days||0)+'" oninput="S.form.days=this.value" /></div>'+
       '<div class="field"><label>'+t('falls')+'</label><input type="number" min="0" value="'+(f.falls||0)+'" oninput="S.form.falls=this.value" /></div></div>'+
@@ -637,7 +661,7 @@ function startManual(){ S.modal=null; S.form={type:'rope'}; go('add'); }
 function startEdit(id){
   const it=item(id); if(!it) return;
   S.form={id:it.id,type:it.type,name:it.name,size:it.size||'',buy:it.buy||'',made:it.made||'',first:it.first||'',
-    weight:it.weight||'',serial:it.serial||'',days:it.days||0,falls:it.falls||0,factor:it.factor||0,
+    weight:it.weight||'',qty:qtyOf(it),serial:it.serial||'',days:it.days||0,falls:it.falls||0,factor:it.factor||0,
     lastInsp:it.lastInsp||'',notes:it.notes||''};
   S.modal=null; go('add');
 }
@@ -688,6 +712,7 @@ function logEvent(k,tk,m,id,extra){ D.events.unshift(Object.assign({d:iso(today(
 function mark(id,kind){
   const it=item(id);
   if(kind==='insp'){ it.lastInsp=iso(today()); if(it.status==='alert') it.status='ok'; logEvent('o','evInsp',it.name,id); toast(t('toInsp')); }
+  else if(kind==='day'){ it.daysBase=(it.daysBase||0)+1; refreshDays(); logEvent('i','evDay',it.name,id); toast(t('toDay')); }  // день лазания без выезда (скалодром)
   else { it.falls++; it.status='alert'; logEvent('a','evFall',it.name,id); toast(t('toFall')); }
   hap(); save(); render();
 }
@@ -703,15 +728,16 @@ function saveItem(){
   if(f.id){ // редактирование существующего; срок пересчитается сам из дат/типа при рендере
     const it=item(f.id); if(!it) return;
     it.type=f.type||it.type; it.name=(f.name||'').trim(); it.size=f.size||'';
-    it.buy=f.buy||''; it.made=f.made||''; it.first=f.first||''; it.weight=+f.weight||0; it.serial=(f.serial||'').trim();
-    it.days=Math.max(0,Math.round(+f.days||0)); it.falls=Math.max(0,Math.round(+f.falls||0));
+    it.buy=f.buy||''; it.made=f.made||''; it.first=f.first||''; it.weight=+f.weight||0; it.qty=Math.max(1,Math.round(+f.qty||1)); it.serial=(f.serial||'').trim();
+    // «Дней» в форме — общая наработка; в daysBase кладём часть сверх выездов, дни пересчитываем
+    it.daysBase=Math.max(0,Math.round((+f.days||0)-doneDays(it.id))); it.falls=Math.max(0,Math.round(+f.falls||0));
     it.factor=Math.max(0,+f.factor||0); it.lastInsp=f.lastInsp||''; it.notes=f.notes||'';
-    hap(); logEvent('o','evEdited',it.name,it.id);
+    refreshDays(); hap(); logEvent('o','evEdited',it.name,it.id);
     S.form={}; save(); openItem(it.id); toast(t('toSaved'));
     return;
   }
   const it={id:++D.seq,type:f.type||'rope',name:f.name.trim(),size:f.size||'',buy:f.buy||iso(today()),made:f.made||'',first:f.first||'',
-    days:0,falls:0,factor:0,weight:+f.weight||0,status:'ok',lastInsp:iso(today()),notes:f.notes||'',photos:[],serial:(f.serial||'').trim()};
+    days:0,daysBase:0,falls:0,factor:0,weight:+f.weight||0,qty:Math.max(1,Math.round(+f.qty||1)),status:'ok',lastInsp:iso(today()),notes:f.notes||'',photos:[],serial:(f.serial||'').trim()};
   D.items.unshift(it); logEvent('i','evAdded',it.name,it.id);
   S.form={}; save(); openItem(it.id); toast(t('toAdded'));
 }
@@ -729,7 +755,7 @@ function scSet(){
     D.items.filter(i=>i.status!=='retired').map(function(i){
       const on=s.items.indexOf(i.id)>=0;
       return '<button class="item" onclick="setPick('+i.id+')"><span class="tick" style="color:'+(on?'var(--petrol)':'var(--line-2)')+'">'+ico(on?'u-check':'u-circle','check')+'</span>'+
-      badge(i.type)+'<span class="grow"><span class="name">'+esc(i.name)+'</span><span class="meta">'+wg(i.weight)+'</span></span></button>';
+      badge(i.type)+'<span class="grow"><span class="name">'+esc(i.name)+'</span><span class="meta">'+wg(itemW(i))+(qtyOf(i)>1?(' · × '+qtyOf(i)):'')+'</span></span></button>';
     }).join('')+
     '<p class="hint">'+t('kitHint')+'</p></div>'+
     '<div class="foot"><button class="btn" '+((s.name.trim()&&s.items.length)?'':'disabled')+' onclick="saveSet()">'+t(edit?'editBtn':'kitCreate')+'</button></div>';
@@ -774,8 +800,7 @@ function depart(){
 function comeHome(){
   const x=D.trips.find(y=>y.id===S.tripId);
   const d=tripDays(x);
-  x.items.forEach(function(id){ const i=item(id); if(i) i.days+=d; });
-  x.state='done'; hap('Medium');
+  x.state='done'; refreshDays(); hap('Medium');   // дни наработки пересчитаются из завершённых выездов
   logEvent('i','evFinished',d+' '+t('dShort'),0,{mx:x.name}); save(); go('trips'); toast(t('toHome',d));
 }
 function reset(){ if(confirm(t('resetQ'))){ D=blank(); save(); applyTheme(); go('gear'); } }
@@ -808,7 +833,9 @@ function doImport(inp){
         const name=String(g(['назв','name'])||'').trim(); if(!name) return;
         D.items.unshift({id:++D.seq,type:catFromText(g(['катег','categ'])),name:name,size:String(g(['разм','size'])||''),
           buy:normDate(g(['дата покупки','purchase']))||iso(today()),made:normDate(g(['дата произ','manufact','made'])),
-          days:0,falls:0,factor:0,weight:+String(g(['вес','weight'])).replace(/\D/g,'')||0,status:'ok',lastInsp:iso(today()),notes:'',photos:[]});
+          days:0,daysBase:0,falls:0,factor:0,weight:+String(g(['вес','weight'])).replace(/\D/g,'')||0,
+          qty:Math.max(1,Math.round(+String(g(['кол','quant','qty'])).replace(/\D/g,'')||1)),
+          status:'ok',lastInsp:iso(today()),notes:'',photos:[]});
         n++;
       });
       if(n){ logEvent('i','evImport',n+' '+t('evPositions')+' '+file.name,0); save(); closeModal(); go('gear'); toast(t('toImported',n)); }
@@ -873,20 +900,20 @@ function importBackup(inp){
     d.notif=d.notif||{insp:1,trip:1,home:1}; d.trips=d.trips||[]; d.events=d.events||[]; d.sets=d.sets||[];
     d.seq=d.seq||1000; d.onboarded=true; d.lang=d.lang||'sys'; d.theme=d.theme||'sys';
     rehydratePhotos(d).then(function(){
-      D=d; save(); applyTheme(); closeModal(); go('gear'); toast(t('toTransferred',d.items.length,d.trips.length));
+      D=d; migrateData(); save(); applyTheme(); closeModal(); go('gear'); toast(t('toTransferred',d.items.length,d.trips.length));
     });
   };
   r.readAsText(file);
 }
 function csvHead(){ return lang()==='ru'
-  ?'Название;Категория;Размер;Дата покупки;Дата производства;Вес'
-  :'Name;Category;Size;Purchase date;Date of manufacture;Weight'; }
+  ?'Название;Категория;Размер;Дата покупки;Дата производства;Вес;Количество'
+  :'Name;Category;Size;Purchase date;Date of manufacture;Weight;Quantity'; }
 function downloadTemplate(){
-  dl(csvHead()+'\nBeal Booster 9.8;'+tlabel('rope')+';70;12.08.2023;01.06.2022;4180\nPetzl Sirocco;'+tlabel('helmet')+';M/L;18.05.2024;01.02.2024;170\n','climbkit-template.csv');
+  dl(csvHead()+'\nBeal Booster 9.8;'+tlabel('rope')+';70;12.08.2023;01.06.2022;4180;1\nPetzl Djinn;'+tlabel('draw')+';;04.03.2025;01.01.2025;99;12\n','climbkit-template.csv');
 }
 function exportCsv(){
   const head=csvHead()+';'+t('days')+';'+t('falls')+';'+t('condition')+'\n';
-  const body=D.items.map(i=>[i.name,tlabel(i.type),i.size,fmt(i.buy),i.made?fmt(i.made):'',i.weight,i.days,i.falls,t(SKEY[i.status])].join(';')).join('\n');
+  const body=D.items.map(i=>[i.name,tlabel(i.type),i.size,fmt(i.buy),i.made?fmt(i.made):'',i.weight,qtyOf(i),i.days,i.falls,t(SKEY[i.status])].join(';')).join('\n');
   dl(head+body,'climbkit-export.csv'); toast(t('toCsv'));
 }
 function dl(text,name){
@@ -936,6 +963,7 @@ function boot(){
     if(real) D=real;
     else D=blank();   // чистый старт без демо (и в вебе, и на устройстве)
     if(!D.sets) D.sets=[];       // совместимость со старыми сохранениями
+    migrateData(); save();       // проставить qty и пересчитать наработку у существующей снаряги
     applyTheme();
     if(!D.onboarded) S.screen='ob';
     render();
