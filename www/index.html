@@ -100,7 +100,12 @@ body{margin:0;background:var(--stone);font-family:'Manrope',system-ui,sans-serif
 .track span.w{background:var(--ochre)}.track span.a{background:var(--clay)}
 .slegend{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-3);margin-top:5px}
 .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.stats .card{padding:11px 12px}
+.stats .card{padding:11px 12px;position:relative}
+.stats button.card{font-family:inherit;text-align:left;width:100%;cursor:pointer;border:1px solid transparent;transition:border-color .15s,transform .08s}
+.stats button.card:active{transform:scale(.97)}
+.stats button.card:focus-visible{border-color:var(--line-2);outline:none}
+.stats .kbadge{position:absolute;top:8px;right:8px;width:17px;height:17px;border-radius:50%;background:var(--panel);color:var(--ink-2);display:flex;align-items:center;justify-content:center;font-size:12px;line-height:1}
+.stats .kbadge svg{width:11px;height:11px}
 .stats .k{font-size:10.5px;color:var(--ink-3);margin:0}
 .stats .v{font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:500;margin:4px 0 0}
 .log{display:flex;gap:12px;padding:9px 0;align-items:flex-start}

@@ -343,18 +343,21 @@ function scItem(){
     ((it.status==='retired'&&it.reasonText)?('<div class="note alert nb">'+ico('u-warn')+'<span><p>'+t(it.reason||'rOther')+'</p><p class="s">'+esc(it.reasonText)+'</p></span></div>'):'')+
     '<p class="label first">'+t('lifeTitle')+'</p><div class="card">'+card+'</div>'+
     '<p class="label">'+t('usage')+'</p><div class="stats">'+
-    '<div class="card"><p class="k">'+t('days')+'</p><p class="v">'+it.days+'</p></div>'+
-    '<div class="card"><p class="k">'+t('falls')+'</p><p class="v">'+it.falls+'</p></div>'+
-    '<div class="card"><p class="k">'+t('factor')+'</p><p class="v">'+(it.factor||'—')+'</p></div></div>'+
+    (it.status==='retired'
+      ?('<div class="card"><p class="k">'+t('days')+'</p><p class="v">'+it.days+'</p></div>'+
+        '<div class="card"><p class="k">'+t('falls')+'</p><p class="v">'+it.falls+'</p></div>'+
+        '<div class="card"><p class="k">'+t('factor')+'</p><p class="v">'+(it.factor||'—')+'</p></div>')
+      :('<button class="card tap" onclick="mark('+it.id+',\'day\')" aria-label="'+t('dayAdd')+'"><span class="kbadge">+</span><p class="k">'+t('days')+'</p><p class="v">'+it.days+'</p></button>'+
+        '<button class="card tap" onclick="mark('+it.id+',\'fall\')" aria-label="'+t('fall')+'"><span class="kbadge">+</span><p class="k">'+t('falls')+'</p><p class="v">'+it.falls+'</p></button>'+
+        '<button class="card tap" onclick="startEditFactor('+it.id+')" aria-label="'+t('factor')+'"><span class="kbadge">'+ico('u-edit')+'</span><p class="k">'+t('factor')+'</p><p class="v">'+(it.factor||'—')+'</p></button>'))+'</div>'+
+    (it.status==='retired'?'':('<p class="hint" style="margin-top:11px">'+t('usageTapHint')+'</p>'))+
     '<p class="label">'+t('photos')+'</p><div class="gallery">'+
     (it.photos||[]).map((p,n)=>'<button style="background-image:url('+photoSrc(p)+')" onclick="openPhoto('+it.id+','+n+')"></button>').join('')+
     '<label>'+ico('u-camera')+'<input type="file" accept="image/*" onchange="addPhoto('+it.id+',this)" /></label></div>'+
     '<p class="label">'+t('notes')+'</p><textarea rows="3" maxlength="500" placeholder="'+t('notesPh')+'" oninput="saveNotes('+it.id+',this.value)">'+esc(it.notes||'')+'</textarea>'+
     '<p class="label">'+t('histTitle')+'</p>'+
     (log.length?log.map(evRow).join(''):'<p class="sub">'+t('nothingLogged')+'</p>')+
-    (it.status==='retired'?'':('<div class="brow"><button class="btn ghost" onclick="mark('+it.id+',\'day\')">'+t('dayAdd')+'</button>'+
-    '<button class="btn ghost" onclick="mark('+it.id+',\'insp\')">'+t('insp')+'</button>'+
-    '<button class="btn ghost" onclick="mark('+it.id+',\'fall\')">'+t('fall')+'</button>'+
+    (it.status==='retired'?'':('<div class="brow"><button class="btn ghost" onclick="mark('+it.id+',\'insp\')">'+t('insp')+'</button>'+
     '<button class="btn dangerghost" onclick="modal(\'retire\','+it.id+')">'+t('retire')+'</button></div>'))+'</div>';
 }
 function evText(e){ return t(e.tk)+(e.rk?(' '+t(e.rk).toLowerCase()):'')+(e.mx?(' '+e.mx):''); }
@@ -540,7 +543,7 @@ function scAdd(){
     (edit?('<p class="label">'+t('usage')+'</p><div class="two">'+
       '<div class="field"><label>'+t('days')+'</label><input type="number" min="0" value="'+(f.days||0)+'" oninput="S.form.days=this.value" /></div>'+
       '<div class="field"><label>'+t('falls')+'</label><input type="number" min="0" value="'+(f.falls||0)+'" oninput="S.form.falls=this.value" /></div></div>'+
-      '<div class="two"><div class="field"><label>'+t('factor')+'</label><input type="number" step="0.1" min="0" value="'+(f.factor||0)+'" oninput="S.form.factor=this.value" /></div>'+
+      '<div class="two"><div class="field"><label>'+t('factor')+'</label><input id="fFactor" type="number" step="0.1" min="0" value="'+(f.factor||0)+'" oninput="S.form.factor=this.value" /></div>'+
       '<div class="field"><label>'+t('fLastInsp')+'</label><input type="date" value="'+(f.lastInsp||'')+'" oninput="S.form.lastInsp=this.value" /></div></div>'):'')+
     '<div class="field"><label>'+t('notes')+'</label><textarea rows="2" maxlength="500" placeholder="'+t('optional')+'" oninput="S.form.notes=this.value">'+esc(f.notes||'')+'</textarea></div></div>'+
     '<div class="foot"><button class="btn" '+((f.name||'').trim()?'':'disabled')+' onclick="saveItem()">'+t(edit?'editBtn':'addBtn')+'</button></div>';
@@ -665,6 +668,7 @@ function startEdit(id){
     lastInsp:it.lastInsp||'',notes:it.notes||''};
   S.modal=null; go('add');
 }
+function startEditFactor(id){ S._focusFactor=true; startEdit(id); }   // клик по плашке «Фактор» — редактирование с фокусом на поле
 function cancelForm(){ const id=S.form.id; S.form={}; if(id) openItem(id); else go('gear'); }
 function toggleNotif(k){ D.notif[k]=D.notif[k]?0:1; save(); render(); }
 function setLang(v){ D.lang=v; save(); render(); }
@@ -939,6 +943,7 @@ function render(keepFocus){
   $('#nav').style.display=(['search','ob','add','tripNew','setNew'].indexOf(s)>=0)?'none':'flex';
   document.documentElement.lang=lang();
   if(keepFocus&&$('#q')){ const el=$('#q'); el.focus(); el.setSelectionRange(el.value.length,el.value.length); }
+  if(S._focusFactor){ const el=$('#fFactor'); if(el){ el.focus(); try{ el.select(); }catch(e){} } S._focusFactor=false; }
 }
 if(window.matchMedia) try{ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',function(){ applyTheme(); }); }catch(e){}
 /* Свайп от левого края вправо — назад (веб-жест, как системный на Android/iOS). */
